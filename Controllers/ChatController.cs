@@ -70,6 +70,22 @@ namespace AutheticationAPI.Controllers
             return Ok(chatHistory);
         }
 
+        [HttpGet("GetChatWithAdmin/{id}")]
+
+        public async Task<IActionResult> GetChatWithAdmin(Guid id)
+        {
+            // Admin ID (you can move this to configuration if needed)
+            Guid adminId = Guid.Parse("67FFCAAA-5C64-466F-5D2B-08DD30805857");
+
+            var chatHistory = await _context.Messages
+        .Where(m =>
+            (m.SenderId == id && m.RecipientId == adminId) ||
+            (m.SenderId == adminId && m.RecipientId == id))
+        .OrderBy(m => m.Timestamp)
+        .ToListAsync();
+
+            return Ok(chatHistory);
+        }
         public class Message
         {
             public Guid Id { get; set; }
