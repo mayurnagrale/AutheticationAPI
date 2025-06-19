@@ -1,0 +1,293 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<h2>Online Users</h2>
+<div class="content-container">
+    <table id="userStatusTable">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Status</th>
+                <th>Last Seen</th>
+            </tr>
+        </thead>
+        <tbody id="userListBody">
+            <tr><td colspan="3">Loading...</td></tr>
+        </tbody>
+    </table>
+
+    <div class="chat-container">
+        <h2>Chat</h2>
+
+        <div class="chat-controls">
+            <label for="recipientInput">Recipient:</label>
+            <select id="recipientSelect">
+                <option value="">Select a User</option>
+            </select>
+
+            <label for="messageInput">Message:</label>
+            <input type="text" id="messageInput" placeholder="Type your message..." />
+
+            <button id="sendButton">Send to User</button>
+            <button id="sendToAllButton">Send to All</button>
+
+        </div>
+
+        <div class="chat-messages">
+            <ul id="messages"></ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
+    <script src="~/js/Chat.js"></script>
+    <script>
+        $(document).ready(function () {
+            var message = "@TempData["ToastrMessage"]";
+            var type = "@TempData["ToastrType"]";
+
+            if (message) {
+                toastr.options = {
+                    "closeButton": true,
+                    "progressBar": true,
+                };
+
+                if (type === "success") {
+                    toastr.success(message);
+                } else if (type === "info") {
+                    toastr.info(message);
+                } else if (type === "warning") {
+                    toastr.warning(message);
+                } else if (type === "error") {
+                    toastr.error(message);
+                }
+            }
+
+            fetchUsersStatus();
+
+        });
+
+        function fetchUsersStatus() {
+            $("#userListBody").html('<tr><td colspan="3">Loading...</td></tr>');
+            $("#recipientSelect").html('<option value="">Select a User</option>');
+
+            $.ajax({
+                url: "/Home/GetUserStatuses",
+                method: "GET",
+                success: function (users) {
+                    if (!users.length) {
+                        $("#userListBody").html('<tr><td colspan="3">No users available.</td></tr>');
+                        return;
+                    }
+
+                    var loggedInUser = getLoggedInUsername();
+                    var userListHtml = "";
+                    var dropdownOptions = '<option value="">Select a User</option>';
+
+                    users.forEach(user => {
+                        var statusClass = user.isOnline ? "online" : "offline";
+                        var statusText = user.isOnline ? "🟢 Online" : "🔴 Offline";
+                        var lastSeen = user.lastSeen ? new Date(user.lastSeen).toLocaleString() : "Never";
+
+                        userListHtml += `
+                            <tr>
+                                <td>${user.username}</td>
+                                <td class="${statusClass}">${statusText}</td>
+                                <td>${lastSeen}</td>
+                            </tr>`;
+
+                        // Add to dropdown if not the logged-in user
+                        if (user.username !== loggedInUser) {
+                            dropdownOptions += `<option value="${user.username}">${user.username}</option>`;
+                        }
+                    });
+
+                    $("#userListBody").html(userListHtml);
+                    $("#recipientSelect").html(dropdownOptions);
+                },
+                error: function (xhr) {
+                    console.error("Failed to load users:", xhr.responseJSON?.message || xhr.statusText);
+                    $("#userListBody").html('<tr><td colspan="3">Error loading users.</td></tr>');
+                }
+            });
+        }
+
+                // Function to get logged-in username from cookies
+        function getLoggedInUsername() {
+            return getCookie("Username") || "";
+        }
+
+        // Helper function to get cookie value by name
+        function getCookie(name) {
+            var cookies = document.cookie.split("; ");
+            for (var i = 0; i < cookies.length; i++) {
+                var parts = cookies[i].split("=");
+                if (parts[0] === name) return decodeURIComponent(parts[1]);
+            }
+            return null;
+        }
+
+
+
+
+    </script>
+}
+
+<style>
+    h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #007BFF;
+    }
+
+    .content-container {
+        width: 80%;
+        margin: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    th, td {
+        padding: 12px 15px;
+        text-align: center;
+    }
+
+    thead {
+        background-color: #007BFF;
+        color: white;
+        font-weight: bold;
+    }
+
+    tbody tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    tbody tr:hover {
+        background-color: #ddd;
+    }
+
+    .online {
+        color: green;
+        font-weight: bold;
+    }
+
+    .offline {
+        color: red;
+        font-weight: bold;
+    }
+
+    .chat-container {
+        width: 100%; /* Matching table width */
+        margin: 30px auto;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        background-color: #ffffff;
+        text-align: center;
+    }
+
+    .chat-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        padding: 10px;
+    }
+
+        .chat-controls label {
+            font-weight: bold;
+        }
+
+        .chat-controls input,
+        .chat-controls select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 200px; /* Ensure consistent width */
+            font-size: 16px;
+            box-sizing: border-box; /* Ensures padding doesn't change width */
+        }
+
+        .chat-controls select {
+            height: 38px; /* Match the input height */
+            cursor: pointer;
+            background-color: white;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            padding-right: 30px; /* Space for dropdown arrow */
+            /* Add custom dropdown arrow */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><polygon points="0,0 20,0 10,10" style="fill:%23444"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+        }
+
+
+        .chat-controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+            .chat-controls button:hover {
+                background-color: #0056b3;
+            }
+
+    .chat-messages {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 20px;
+        border-top: 1px solid #ddd;
+        padding-top: 10px;
+        text-align: left;
+    }
+
+    #messages {
+        list-style: none;
+        padding: 0;
+    }
+
+        #messages li {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 10px;
+            max-width: 80%;
+            display: inline-block;
+        }
+
+    .sent {
+        background-color: #007BFF;
+        color: white;
+        align-self: flex-end;
+        text-align: right;
+    }
+
+    .received {
+        background-color: #f1f1f1;
+        color: black;
+        align-self: flex-start;
+    }
+
+    .chat-controls {
+        flex-direction: column;
+    }
+
+        .chat-controls input {
+            width: 100%;
+        }
+
+    }
+</style>

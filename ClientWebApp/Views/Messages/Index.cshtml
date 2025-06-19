@@ -1,0 +1,271 @@
+﻿@using static ClientWebApp.Controllers.MessagesController
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model List<UserChatListDTO>
+
+<style>
+    .chat-container {
+        display: flex;
+        height: 80vh; /* Full viewport height */
+    }
+
+    .chat-list {
+        width: 30%; /* Adjust width as needed */
+        background-color: #f5f5f5; /* Light background */
+        padding: 20px;
+        overflow-y: auto; /* Enable scrolling for long lists */
+    }
+
+    .chat-detail {
+        width: 70%; /* Remaining space for chat details */
+        background-color: #fff; /* White background */
+        padding: 20px;
+    }
+
+    .chat-card {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+        cursor: pointer;
+    }
+        
+        .chat-card:hover {
+            background-color: #e0e0e0; /* Light gray on hover */
+        }
+
+        .chat-card.selected {
+            background-color: #e0f7fa;
+        }
+
+    .card-profile img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 15px;
+    }
+
+    .chat-detail-section {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .chat-header {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .back-button {
+        margin-right: 10px;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .user-profile {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+
+    .user-name {
+        font-weight: bold;
+        margin-right: auto;
+    }
+
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: gray; /* Change to red for offline */
+        margin-left: 10px;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 10px;
+        overflow-y: auto;
+    }
+
+    .message {
+        margin-bottom: 10px;
+    }
+
+    .user-message {
+        text-align: right;
+    }
+
+    .partner-message {
+        text-align: left;
+    }
+
+    .message-content {
+        display: inline-block;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .user-message .message-content {
+        background-color: #dcf8c6; /* Light green for user's messages */
+    }
+
+    .partner-message .message-content {
+        background-color: #fff; /* White for partner's messages */
+    }
+
+    .message-time {
+        font-size: 0.8em;
+        color: #888;
+    }
+
+    .input-field {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+    }
+
+    .text-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+    }
+
+    .send-button, .attach-button, .voice-button {
+        margin-left: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 10px;
+        cursor: pointer;
+    }
+
+</style>
+
+<div class="chat-container">
+    <input type="hidden" id="selected_user_id">
+
+    <div class="chat-list">
+        @foreach (var user in Model)
+        {
+            <div class="chat-card" onclick="selectChat(this, '@user.FirstName @user.LastName', '@user.Id', '@user.IsOnline', '@user.UserName')">
+                <div class="card-profile">
+                    <img src="/assets/Images/default_profile.jpg" alt="Profile Picture">
+                </div>
+                <div class="card-info">
+                    <div class="card-name">@user.FirstName @user.LastName</div>
+                    <div class="card-last-message">
+                        Last seen: @(user.IsOnline ? "Online" : user.LastSeen?.ToString("hh:mm tt") ?? "Unknown")
+                    </div>
+                    <div class="card-time">10:37 AM</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Chat Detail -->
+    <div class="chat-detail chat-detail-section">
+        <div class="chat-header">
+            <img src="/assets/Images/default_profile.jpg" alt="User Profile" class="user-profile" id="chat-profile">
+            <div class="user-name" id="chat-username">Select a chat</div>
+            <div class="status-indicator" id="status-indicator"></div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Chat messages will be dynamically loaded here -->
+        </div>
+        <div class="input-field">
+            <input id="message_input"  type="text" placeholder="Type a message..." class="text-input">
+            <button id="send_message_button" class="send-button">Send</button>
+            <button class="attach-button">📎</button>
+            <button class="voice-button">🎤</button>
+        </div>
+    </div>
+</div>
+
+
+
+@section Scripts{
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="~/js/Chat.js"></script>
+
+    <script>
+
+        function selectChat(element, name, userId, isOnline, username) {
+            // Remove 'selected' class from all chat cards
+            document.querySelectorAll('.chat-card').forEach(card => card.classList.remove('selected'));
+
+            // Add 'selected' class to the clicked card
+            element.classList.add('selected');
+
+            // Update chat details
+            document.getElementById('chat-username').textContent = name;
+            document.getElementById('selected_user_id').value  = username;
+            document.getElementById('chat-messages').innerHTML = ""; // Clear chat for now
+
+             // Update status indicator color
+            let statusIndicator = document.getElementById('status-indicator');
+            console.log(isOnline);
+            statusIndicator.style.backgroundColor = isOnline === 'True' ? 'green' : 'red';
+            console.log(userId);
+            // AJAX request to fetch chat history
+                $.ajax({
+            url: `/Messages/GetChatHistory`,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ userid: userId }),
+           success: function (messages) {
+        console.log("Received messages:", messages); // ✅ Check the data
+        const chatMessagesDiv = document.getElementById("chat-messages");
+        chatMessagesDiv.innerHTML = ""; // Clear previous messages
+
+        messages.forEach(msg => {
+            console.log("Appending message:", msg); // ✅ Log each message
+            console.log("userId:", userId, "RecipientId:", msg.recipientId, "SenderId:", msg.senderId);
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+
+            // Determine if it's the logged-in user's message
+            if (msg.recipientId === userId) {
+                messageDiv.classList.add('user-message');
+            } else {
+                messageDiv.classList.add('partner-message');
+            }
+
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+            messageContent.textContent = msg.content;
+
+            const messageTime = document.createElement('div');
+            messageTime.classList.add('message-time');
+            messageTime.textContent = new Date(msg.timestamp).toLocaleTimeString();
+
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(messageTime);
+            chatMessagesDiv.appendChild(messageDiv);
+        });
+
+        console.log("Chat messages updated:", chatMessagesDiv.innerHTML); // ✅ Verify the HTML content
+
+        // Scroll to the bottom of chat
+        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+            },
+            error: function (error) {
+                console.error("Error fetching chat history:", error);
+            }
+        });
+
+        }
+    </script>
+}
+

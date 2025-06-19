@@ -1,0 +1,231 @@
+﻿@{
+    ViewData["Title"] = "Chat with Admin";
+}
+
+<style>
+    .chat-container {
+        display: flex;
+        height: 80vh; /* Full viewport height */
+    }
+
+    .chat-list {
+        width: 30%; /* Adjust width as needed */
+        background-color: #f5f5f5; /* Light background */
+        padding: 20px;
+        overflow-y: auto; /* Enable scrolling for long lists */
+    }
+
+    .chat-detail {
+        width: 70%; /* Remaining space for chat details */
+        background-color: #fff; /* White background */
+        padding: 20px;
+    }
+
+    .chat-card {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+        cursor: pointer;
+    }
+
+        .chat-card:hover {
+            background-color: #e0e0e0; /* Light gray on hover */
+        }
+
+        .chat-card.selected {
+            background-color: #e0f7fa;
+        }
+
+    .card-profile img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 15px;
+    }
+
+    .chat-detail-section {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .chat-header {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .back-button {
+        margin-right: 10px;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .user-profile {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+
+    .user-name {
+        font-weight: bold;
+        margin-right: auto;
+    }
+
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: gray; /* Change to red for offline */
+        margin-left: 10px;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 10px;
+        overflow-y: auto;
+    }
+
+    .message {
+        margin-bottom: 10px;
+    }
+
+    .user-message {
+        text-align: right;
+    }
+
+    .partner-message {
+        text-align: left;
+    }
+
+    .message-content {
+        display: inline-block;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .user-message .message-content {
+        background-color: #dcf8c6; /* Light green for user's messages */
+    }
+
+    .partner-message .message-content {
+        background-color: #fff; /* White for partner's messages */
+    }
+
+    .message-time {
+        font-size: 0.8em;
+        color: #888;
+    }
+
+    .input-field {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+    }
+
+    .text-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+    }
+
+    .send-button, .attach-button, .voice-button {
+        margin-left: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 10px;
+        cursor: pointer;
+    }
+
+</style>
+
+<div class="chat-container">
+    <input type="hidden" id="selected_user_id">
+
+    <!-- Chat Detail -->
+    <div class="chat-detail chat-detail-section">
+        <div class="chat-header">
+            <img src="/assets/Images/default_profile.jpg" alt="User Profile" class="user-profile" id="chat-profile">
+            <div class="user-name" id="chat-username">Admin</div>
+            <div class="status-indicator" id="status-indicator"></div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Chat messages will be dynamically loaded here -->
+        </div>
+        <div class="input-field">
+            <input id="chat_input" type="text" placeholder="Type a message..." class="text-input">
+            <button id="send_chat_button" class="send-button">Send</button>
+            <button class="attach-button">📎</button>
+            <button class="voice-button">🎤</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="~/js/Chat.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            loadChatHistory();
+
+            $('#send_message_button').click(function () {
+                sendMessage();
+            });
+        });
+
+        const adminUserId = '67FFCAAA-5C64-466F-5D2B-08DD30805857';
+
+        function loadChatHistory() {
+            $.ajax({
+                url: "/Chat/GetChatWithAdmin",
+                type: "GET",
+                success: function (messages) {
+                    const chatMessagesDiv = $("#chat-messages");                  
+                    chatMessagesDiv.empty();
+                    messages.forEach(msg => {
+                        const isAdminMessage = msg.senderId.toLowerCase() === adminUserId.toLowerCase();
+                        const messageDiv = $('<div class="message"></div>');
+                        messageDiv.addClass(isAdminMessage ? 'partner-message' : 'user-message');
+                        messageDiv.append(`<div class='message-content'>${msg.content}</div>`);
+                        messageDiv.append(`<div class='message-time'>${new Date(msg.timestamp).toLocaleTimeString()}</div>`);
+                        chatMessagesDiv.append(messageDiv);
+                    });
+                    chatMessagesDiv.scrollTop(chatMessagesDiv[0].scrollHeight);
+                },
+                error: function () {
+                    console.error("Error fetching chat history.");
+                }
+            });
+        }
+
+        function sendMessage() {
+            const message = $("#message_input").val();
+            if (!message.trim()) return;
+
+            $.ajax({
+                url: "/Messages/SendMessageToAdmin",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ content: message }),
+                success: function () {
+                    $("#message_input").val("");
+                    loadChatHistory();
+                },
+                error: function () {
+                    console.error("Error sending message.");
+                }
+            });
+        }
+    </script>
+}
